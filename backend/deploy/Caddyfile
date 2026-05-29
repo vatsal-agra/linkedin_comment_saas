@@ -1,0 +1,31 @@
+# Caddy reverse proxy for the Replier backend.
+# Caddy automatically provisions and renews a free HTTPS certificate
+# from Let's Encrypt for this domain — no manual cert work needed.
+#
+# 1. Replace REPLACE_ME.duckdns.org with your real DuckDNS domain.
+# 2. Make sure your DuckDNS domain points to this VM's public IP.
+# 3. Make sure ports 80 and 443 are open (OS firewall AND Oracle security list).
+# 4. Copy this file to /etc/caddy/Caddyfile, then: sudo systemctl reload caddy
+
+REPLACE_ME.duckdns.org {
+	# The FastAPI app listens only on localhost; Caddy is the public edge.
+	reverse_proxy 127.0.0.1:8000
+
+	encode gzip zstd
+
+	# Basic hardening headers.
+	header {
+		Strict-Transport-Security "max-age=31536000;"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+
+	log {
+		output file /var/log/caddy/replier.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+	}
+}

@@ -1,0 +1,38 @@
+# systemd unit for the Replier backend.
+#
+# IMPORTANT: run exactly ONE process (no --workers). The APScheduler runs
+# in-process; multiple workers would create duplicate schedulers and send
+# duplicate Telegram reports.
+#
+# Install:
+#   sudo cp replier.service /etc/systemd/system/replier.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now replier
+#   sudo systemctl status replier
+#
+# Adjust User/paths below if you didn't deploy to /home/ubuntu/replier.
+
+[Unit]
+Description=Replier backend (FastAPI + APScheduler)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/replier/backend
+EnvironmentFile=/home/ubuntu/replier/backend/.env
+ExecStart=/home/ubuntu/replier/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=5
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/home/ubuntu/replier/backend/data
+
+[Install]
+WantedBy=multi-user.target

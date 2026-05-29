@@ -1,0 +1,15 @@
+# Netlify build config. Assumes this frontend lives in a `frontend/` subfolder
+# of the repo. If you publish the frontend as its own repo, change `base` to ".".
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# SPA fallback: every route serves index.html so React Router can handle it.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
