@@ -89,7 +89,13 @@ def fetch_posts(
         return []
 
     client = ApifyClient(apify_token)
-    run_input = {"profileUrls": profile_urls, "maxPosts": posts_per_profile}
+    # maxPosts may be interpreted as a global total by the actor when multiple
+    # profiles are passed together, so multiply by profile count to ensure we
+    # get up to posts_per_profile posts per profile.
+    run_input = {
+        "profileUrls": profile_urls,
+        "maxPosts": posts_per_profile * len(profile_urls),
+    }
 
     print(f"[fetcher] actor={actor_id} profiles={len(profile_urls)} maxPosts={posts_per_profile}")
     run = client.actor(actor_id).call(run_input=run_input)
