@@ -7,6 +7,7 @@ const NAV = [
   { to: "/app/profiles", label: "Tracked profiles" },
   { to: "/app/profile", label: "My profile" },
   { to: "/app/schedule", label: "Schedule" },
+  { to: "/app/finetuning", label: "Fine-tuning" },
   { to: "/app/keys", label: "API keys" },
 ];
 

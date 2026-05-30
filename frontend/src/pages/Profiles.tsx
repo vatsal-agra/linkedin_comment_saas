@@ -30,6 +30,11 @@ export default function Profiles() {
   const [notice, setNotice] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [addingSelected, setAddingSelected] = useState(false);
+
   async function load() {
     try {
       setProfiles(await api.listProfiles());
@@ -90,6 +95,58 @@ export default function Profiles() {
     }
   }
 
+  async function runSuggest() {
+    setError(null);
+    setNotice(null);
+    setSuggesting(true);
+    try {
+      const { urls } = await api.suggestProfiles();
+      setSuggestions(urls);
+      setSelected(new Set(urls));
+      if (urls.length === 0) {
+        setNotice("Couldn't extract any suggestions this time — try again.");
+      }
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : "Could not generate suggestions."
+      );
+    } finally {
+      setSuggesting(false);
+    }
+  }
+
+  function toggleSel(url: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(url)) next.delete(url);
+      else next.add(url);
+      return next;
+    });
+  }
+
+  async function addSelected() {
+    const urls = suggestions.filter((u) => selected.has(u));
+    if (urls.length === 0) return;
+    setError(null);
+    setNotice(null);
+    setAddingSelected(true);
+    try {
+      const added = await api.addBulk(urls);
+      await load();
+      setSuggestions([]);
+      setSelected(new Set());
+      setNotice(`Added ${added.length} profile${added.length === 1 ? "" : "s"}.`);
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : "Could not add those profiles."
+      );
+    } finally {
+      setAddingSelected(false);
+    }
+  }
+
   async function remove(id: number) {
     setError(null);
     setDeletingId(id);
@@ -112,13 +169,20 @@ export default function Profiles() {
           Tracked profiles
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          The LinkedIn people whose new posts you want drafts for. Add as many
-          as you like — you control the Apify spend.
+          The LinkedIn people whose new posts you want drafts for. You control
+          the Apify spend — see the note below on sensible limits.
         </p>
       </div>
 
       {error && <Alert kind="error">{error}</Alert>}
       {notice && <Alert kind="success">{notice}</Alert>}
+
+      <Alert kind="info">
+        On the <strong>free Apify tier</strong>, stick to around{" "}
+        <strong>10 profiles</strong>. Each profile is fetched every run, so more
+        profiles means more Apify usage — go beyond 10 only once you've raised
+        the limits on your own Apify key.
+      </Alert>
 
       <Card>
         <form onSubmit={addSingle} className="space-y-4">
@@ -172,6 +236,73 @@ export default function Profiles() {
             >
               Add all
             </Button>
+          </div>
+        )}
+      </Card>
+
+      <Card>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 className="text-base font-semibold text-slate-900">
+              Suggest profiles for me
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              We read your "About me" and ask Gemini for LinkedIn people worth
+              following. Pick the ones you want — they're AI suggestions, so
+              double-check each link.
+            </p>
+          </div>
+          <Button
+            variant="secondary"
+            onClick={runSuggest}
+            loading={suggesting}
+            className="flex-shrink-0"
+          >
+            Auto-suggest
+          </Button>
+        </div>
+
+        {suggestions.length > 0 && (
+          <div className="mt-4 space-y-3">
+            <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
+              {suggestions.map((url) => (
+                <li key={url} className="flex items-center gap-3 px-3 py-2.5">
+                  <input
+                    type="checkbox"
+                    checked={selected.has(url)}
+                    onChange={() => toggleSel(url)}
+                    className="h-4 w-4 flex-shrink-0 accent-brand-600"
+                  />
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="min-w-0 flex-1 truncate text-sm text-slate-700 hover:text-brand-600 hover:underline"
+                  >
+                    {shortUrl(url)}
+                  </a>
+                </li>
+              ))}
+            </ul>
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={addSelected}
+                loading={addingSelected}
+                disabled={selected.size === 0}
+              >
+                Add selected ({selected.size})
+              </Button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSuggestions([]);
+                  setSelected(new Set());
+                }}
+                className="text-sm font-medium text-slate-500 hover:text-slate-800"
+              >
+                Dismiss
+              </button>
+            </div>
           </div>
         )}
       </Card>

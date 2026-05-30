@@ -13,14 +13,6 @@ import {
 const selectClass =
   "w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 bg-white";
 
-const MODELS = [
-  "gemini-2.5-flash",
-  "gemini-2.5-pro",
-  "gemini-2.0-flash",
-  "gemini-1.5-flash",
-  "gemini-1.5-pro",
-];
-
 const FALLBACK_ZONES = [
   "Asia/Kolkata",
   "UTC",
@@ -82,10 +74,6 @@ export default function Schedule() {
         schedule_hour: s.schedule_hour,
         schedule_minute: s.schedule_minute,
         timezone: s.timezone,
-        relevance_threshold: s.relevance_threshold,
-        posts_per_profile: s.posts_per_profile,
-        max_drafts_per_account: s.max_drafts_per_account,
-        gemini_model: s.gemini_model,
       });
       setS(updated);
       setNotice("Schedule saved.");
@@ -113,8 +101,8 @@ export default function Schedule() {
           Schedule
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          Pick when Replier runs each day and fine-tune how it filters and
-          drafts.
+          Pick when Replier runs each day. Filtering and drafting controls live
+          on the Fine-tuning page.
         </p>
       </div>
 
@@ -213,96 +201,6 @@ export default function Schedule() {
           <strong>{fmtClock(s.schedule_hour, s.schedule_minute)}</strong> your
           chosen time zone, every day.
         </p>
-      </Card>
-
-      {/* Tuning */}
-      <Card>
-        <h2 className="text-base font-semibold text-slate-900">Fine-tuning</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Sensible defaults are set. Adjust only if you want to.
-        </p>
-
-        <div className="mt-5 space-y-5">
-          <Field
-            label={`Relevance threshold — ${s.relevance_threshold}/10`}
-            hint="Only posts scoring at or above this get a draft. Higher = stricter, fewer drafts."
-          >
-            <input
-              type="range"
-              min={0}
-              max={10}
-              step={1}
-              value={s.relevance_threshold}
-              onChange={(e) =>
-                patch({ relevance_threshold: Number(e.target.value) })
-              }
-              className="w-full accent-brand-600"
-            />
-          </Field>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field
-              label="Posts per profile"
-              hint="How many recent posts to fetch per profile (1–50)."
-            >
-              <input
-                type="number"
-                min={1}
-                max={50}
-                value={s.posts_per_profile}
-                onChange={(e) =>
-                  patch({
-                    posts_per_profile: Math.max(
-                      1,
-                      Math.min(50, Number(e.target.value) || 1)
-                    ),
-                  })
-                }
-                className={selectClass}
-              />
-            </Field>
-            <Field
-              label="Max drafts per profile"
-              hint="Cap on drafts created per profile each run (1–20)."
-            >
-              <input
-                type="number"
-                min={1}
-                max={20}
-                value={s.max_drafts_per_account}
-                onChange={(e) =>
-                  patch({
-                    max_drafts_per_account: Math.max(
-                      1,
-                      Math.min(20, Number(e.target.value) || 1)
-                    ),
-                  })
-                }
-                className={selectClass}
-              />
-            </Field>
-          </div>
-
-          <Field
-            label="Gemini model"
-            hint="Flash models are fast and cheap. Pro is stronger but costs more."
-          >
-            <select
-              className={selectClass}
-              value={s.gemini_model}
-              onChange={(e) => patch({ gemini_model: e.target.value })}
-            >
-              {!MODELS.includes(s.gemini_model) && (
-                <option value={s.gemini_model}>{s.gemini_model}</option>
-              )}
-              {MODELS.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
       </Card>
 
       <div className="flex justify-end">

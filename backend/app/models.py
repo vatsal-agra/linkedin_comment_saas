@@ -60,7 +60,7 @@ class UserSettings(Base):
     # --- Tuning ---
     gemini_model = Column(String(64), default="gemini-2.5-flash")
     relevance_threshold = Column(Integer, default=7)
-    posts_per_profile = Column(Integer, default=10)
+    posts_per_profile = Column(Integer, default=5)
     max_drafts_per_account = Column(Integer, default=2)
 
     # --- Schedule ---

@@ -141,6 +141,8 @@ export const api = {
   addProfile: (url: string) => request<Profile>("POST", "/profiles", { url }),
   addBulk: (urls: string[]) =>
     request<Profile[]>("POST", "/profiles/bulk", { urls }),
+  suggestProfiles: () =>
+    request<{ urls: string[] }>("POST", "/profiles/suggest"),
   deleteProfile: (id: number) =>
     request<{ message: string }>("DELETE", `/profiles/${id}`),
 

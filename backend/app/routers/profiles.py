@@ -7,9 +7,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app import models, schemas
+from app import config, crypto, models, schemas
 from app.database import get_db
 from app.deps import get_current_user
+from app.pipeline.suggester import suggest_linkedin_profiles
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
 
@@ -94,6 +95,33 @@ def add_bulk(
         out.append(p)
     db.commit()
     return out
+
+
+@router.post("/suggest", response_model=schemas.ProfileSuggestResponse)
+def suggest_profiles(
+    user: models.User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    settings = user.settings
+    profile_text = (settings.profile_text or "").strip() if settings else ""
+    if not profile_text:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Write your 'About me' on the My Profile page first — we use it to know what to suggest.",
+        )
+    gemini_key = crypto.decrypt(settings.gemini_key_enc) if settings else ""
+    if not gemini_key:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Add your Gemini key first so we can generate suggestions.",
+        )
+    model_name = (settings.gemini_model or config.DEFAULT_GEMINI_MODEL)
+    try:
+        urls = suggest_linkedin_profiles(gemini_key, profile_text, model_name)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY, f"Could not generate suggestions: {e}"
+        )
+    return schemas.ProfileSuggestResponse(urls=urls)
 
 
 @router.delete("/{profile_id}", response_model=schemas.MessageResponse)

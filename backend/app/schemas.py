@@ -109,6 +109,10 @@ class ProfileResponse(BaseModel):
         from_attributes = True
 
 
+class ProfileSuggestResponse(BaseModel):
+    urls: list[str]
+
+
 # --- Runs -------------------------------------------------------------------
 class RunResponse(BaseModel):
     id: int

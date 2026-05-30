@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import Profiles from "./pages/Profiles";
 import MyProfile from "./pages/MyProfile";
 import Schedule from "./pages/Schedule";
+import FineTuning from "./pages/FineTuning";
 import Keys from "./pages/Keys";
 import type { ReactNode } from "react";
 
@@ -54,6 +55,7 @@ export default function App() {
         <Route path="profiles" element={<Profiles />} />
         <Route path="profile" element={<MyProfile />} />
         <Route path="schedule" element={<Schedule />} />
+        <Route path="finetuning" element={<FineTuning />} />
         <Route path="keys" element={<Keys />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
