@@ -147,6 +147,7 @@ export const api = {
   listRuns: () => request<Run[]>("GET", "/runs"),
   nextRun: () => request<{ next_run_at: string | null }>("GET", "/runs/next"),
   triggerTest: () => request<{ message: string }>("POST", "/runs/test"),
+  resetSeenPosts: () => request<{ message: string }>("DELETE", "/runs/seen-posts"),
 
   discoverChatId: (bot_token: string) =>
     request<{ chats: ChatOption[] }>("POST", "/telegram/discover-chat-id", {

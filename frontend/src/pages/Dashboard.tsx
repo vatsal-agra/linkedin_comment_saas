@@ -28,6 +28,7 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
 
   const [testing, setTesting] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   async function load() {
@@ -53,6 +54,20 @@ export default function Dashboard() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function resetSeen() {
+    if (!window.confirm("Clear your seen-posts history? The next run will re-fetch and re-score all posts from your tracked profiles.")) return;
+    setNotice(null);
+    setResetting(true);
+    try {
+      const res = await api.resetSeenPosts();
+      setNotice(res.message);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not reset seen posts.");
+    } finally {
+      setResetting(false);
+    }
+  }
 
   async function runTest() {
     setNotice(null);
@@ -174,6 +189,24 @@ export default function Dashboard() {
           </div>
           <Button onClick={runTest} loading={testing} disabled={!onboarded}>
             Run test
+          </Button>
+        </div>
+      </Card>
+
+      {/* Reset seen posts */}
+      <Card>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 className="text-base font-semibold text-slate-900">
+              Reset seen posts
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Clear your dedup history so the next run re-fetches and re-scores
+              everything. Useful after changing your threshold or tracked profiles.
+            </p>
+          </div>
+          <Button variant="secondary" onClick={resetSeen} loading={resetting}>
+            Reset
           </Button>
         </div>
       </Card>

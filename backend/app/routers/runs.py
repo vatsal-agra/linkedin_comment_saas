@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app import models, schemas
@@ -58,4 +58,19 @@ def trigger_test(
     background.add_task(run_for_user, user.id, "manual")
     return schemas.MessageResponse(
         message="Test run started. Check your Telegram in a minute or two."
+    )
+
+
+@router.delete("/seen-posts", response_model=schemas.MessageResponse)
+def reset_seen_posts(
+    user: models.User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    """Clear the dedup history for this user so the next run re-evaluates all posts."""
+    result = db.execute(
+        delete(models.SeenPost).where(models.SeenPost.user_id == user.id)
+    )
+    db.commit()
+    count = result.rowcount
+    return schemas.MessageResponse(
+        message=f"Cleared {count} seen post{'s' if count != 1 else ''}. The next run will re-fetch and re-score everything."
     )
