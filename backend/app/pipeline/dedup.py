@@ -1,34 +1,70 @@
-"""Per-user dedup backed by the shared SQLite DB (seen_posts table)."""
+"""Per-user dedup ledger backed by the seen_posts table.
+
+Mirrors the single-user tool's SQLite dedup, but every query is scoped to a
+user_id so one user can never see or affect another's state.
+"""
 from __future__ import annotations
 
-from typing import Dict, List
-
 from sqlalchemy import select
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
-from app.models import SeenPost
+from ..models import SeenPost, utcnow
 
 
-def filter_unseen(db: Session, user_id: int, posts: List[Dict]) -> List[Dict]:
-    urls = [p["url"] for p in posts if p.get("url")]
+def filter_unseen(db: Session, user_id: int, posts: list[dict]) -> list[dict]:
+    """Return only posts whose URL we haven't recorded for this user yet.
+
+    Also de-duplicates *within* this batch. The same post can be fetched more
+    than once in a single run — e.g. a post reposted by several tracked
+    profiles shares one canonical URL — and we want to score, draft, and
+    record it exactly once.
+    """
+    if not posts:
+        return []
+    urls = [p.get("url", "") for p in posts if p.get("url")]
     if not urls:
         return []
-    rows = db.execute(
-        select(SeenPost.post_url).where(
-            SeenPost.user_id == user_id, SeenPost.post_url.in_(urls)
-        )
-    ).all()
-    seen = {r[0] for r in rows}
-    return [p for p in posts if p.get("url") and p["url"] not in seen]
+    seen = set(
+        db.scalars(
+            select(SeenPost.post_url).where(
+                SeenPost.user_id == user_id,
+                SeenPost.post_url.in_(urls),
+            )
+        ).all()
+    )
+    out: list[dict] = []
+    batch: set[str] = set()
+    for p in posts:
+        url = p.get("url", "")
+        if not url or url in seen or url in batch:
+            continue
+        batch.add(url)
+        out.append(p)
+    return out
 
 
-def mark_seen(db: Session, user_id: int, post_url: str, author: str = "") -> None:
-    # Avoid duplicate-insert errors on the (user_id, post_url) unique constraint.
-    exists = db.execute(
-        select(SeenPost.id).where(
-            SeenPost.user_id == user_id, SeenPost.post_url == post_url
-        )
-    ).first()
-    if exists:
+def mark_seen(db: Session, user_id: int, posts: list[dict]) -> None:
+    """Record posts as seen for this user. Commits on success.
+
+    Idempotent: any (user_id, post_url) pair that already exists — or is
+    repeated within this batch (e.g. a repost) — is ignored via
+    ON CONFLICT DO NOTHING instead of raising an IntegrityError, so re-runs
+    and reposts can never crash the pipeline.
+    """
+    rows: dict[str, dict] = {}
+    for p in posts:
+        url = p.get("url", "")
+        if not url or url in rows:
+            continue
+        rows[url] = {
+            "user_id": user_id,
+            "post_url": url,
+            "author": p.get("author", ""),
+            "seen_at": utcnow(),
+        }
+    if not rows:
         return
-    db.add(SeenPost(user_id=user_id, post_url=post_url, author=author))
+    stmt = sqlite_insert(SeenPost).values(list(rows.values())).on_conflict_do_nothing()
+    db.execute(stmt)
+    db.commit()
