@@ -130,8 +130,7 @@ def run_for_user(user_id: int, trigger: str = "schedule") -> Dict:
         telegram_sender.send_report(bot_token, chat_id, drafts)
 
         # 5. Mark seen ONLY after a successful send
-        for post in new_posts:
-            dedup.mark_seen(db, user_id, post["url"], post.get("author", ""))
+        dedup.mark_seen(db, user_id, new_posts)
 
         settings.last_run_at = _utcnow()
         db.commit()
